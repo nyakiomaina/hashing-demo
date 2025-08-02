@@ -1,0 +1,12 @@
+[package]
+name = "hashing-demo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sha2 = "0.10"
+hex = "0.4"
+dialoguer = "0.11"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+blake2 = "0.10"
+md5 = "0.7"
