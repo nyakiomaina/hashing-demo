@@ -72,38 +72,49 @@ fn hash_file(file_path: &str, algorithm: &str) -> Result<String, Box<dyn std::er
     })
 }
 
-fn main() {
-    println!("Hashing Function Demo");
+fn compare_hashes() {
 
-    loop {
-        let mode_choices = vec!["Text Hashing", "File Hashing"];
-    let mode_selection = Select::new()
-        .with_prompt("Choose hashing mode")
-        .items(&mode_choices)
+    let compare_mode_choices = vec!["Compare Text", "Compare Files"];
+    let compare_mode = Select::new()
+        .with_prompt("Choose comparison mode")
+        .items(&compare_mode_choices)
         .default(0)
         .interact()
         .unwrap();
 
-    let (input, input_type) = match mode_selection {
+    let (input1, input2, input_type) = match compare_mode {
         0 => {
-            print!("Enter text to hash: ");
+            print!("Enter first text: ");
             io::stdout().flush().unwrap();
-            let mut input = String::new();
-            io::stdin().read_line(&mut input).unwrap();
-            let input = input.trim();
-            (input.to_string(), "Text")
+            let mut input1 = String::new();
+            io::stdin().read_line(&mut input1).unwrap();
+            let input1 = input1.trim();
+
+            print!("Enter second text: ");
+            io::stdout().flush().unwrap();
+            let mut input2 = String::new();
+            io::stdin().read_line(&mut input2).unwrap();
+            let input2 = input2.trim();
+
+            (input1.to_string(), input2.to_string(), "Text")
         }
         1 => {
-            print!("Enter file path to hash: ");
+            print!("Enter first file path: ");
             io::stdout().flush().unwrap();
-            let mut input = String::new();
-            io::stdin().read_line(&mut input).unwrap();
-            let input = input.trim();
-            (input.to_string(), "File")
+            let mut input1 = String::new();
+            io::stdin().read_line(&mut input1).unwrap();
+            let input1 = input1.trim();
+
+            print!("Enter second file path: ");
+            io::stdout().flush().unwrap();
+            let mut input2 = String::new();
+            io::stdin().read_line(&mut input2).unwrap();
+            let input2 = input2.trim();
+
+            (input1.to_string(), input2.to_string(), "File")
         }
         _ => unreachable!(),
     };
-
 
     let choices = vec!["SHA-256", "Keccak-256", "Blake2b", "MD5"];
     let selection = Select::new()
@@ -114,37 +125,130 @@ fn main() {
         .unwrap();
 
     let algorithm = choices[selection];
-    let hash_result = match mode_selection {
-        0 => {
-            Ok(hash_text(&input, algorithm))
-        }
-        1 => {
-            hash_file(&input, algorithm)
-        }
+
+    let hash1_result = match compare_mode {
+        0 => Ok(hash_text(&input1, algorithm)),
+        1 => hash_file(&input1, algorithm),
         _ => unreachable!(),
     };
 
-    match hash_result {
-        Ok(hash) => {
-            println!("\nInput: '{}'", input);
-            println!("Type: {}", input_type);
+    let hash2_result = match compare_mode {
+        0 => Ok(hash_text(&input2, algorithm)),
+        1 => hash_file(&input2, algorithm),
+        _ => unreachable!(),
+    };
+
+    match (hash1_result, hash2_result) {
+        (Ok(hash1), Ok(hash2)) => {
+            println!("\nComparison Results:");
             println!("Algorithm: {}", algorithm);
-            println!("Output Hash: {}\n", hash);
+            println!("Type: {}", input_type);
+            println!();
+            println!("Input 1: '{}'", input1);
+            println!("Hash 1:  {}", hash1);
+            println!();
+            println!("Input 2: '{}'", input2);
+            println!("Hash 2:  {}", hash2);
+            println!();
 
-            match selection {
-                0 => println!("SHA-256 is widely used in Bitcoin & general cryptography."),
-                1 => println!("Keccak-256 is used in Ethereum smart contracts."),
-                2 => println!("Blake2b is fast and secure. Used in modern protocols like Zcash."),
-                3 => println!("MD5 is broken. Do NOT use it for security-critical tasks."),
-                _ => {}
+            if hash1 == hash2 {
+            } else {
+                let differences = hash1.chars().zip(hash2.chars())
+                    .filter(|(a, b)| a != b)
+                    .count();
+                let total_chars = hash1.len();
+                let difference_percentage = (differences as f64 / total_chars as f64) * 100.0;
+
+                println!("Character differences: {}/{} ({:.1}%)", differences, total_chars, difference_percentage);
             }
-
-
         }
-        Err(e) => {
-            eprintln!("Error: {}", e);
+        (Err(e), _) => {
+            eprintln!("Error with first input: {}", e);
+        }
+        (_, Err(e)) => {
+            eprintln!("Error with second input: {}", e);
         }
     }
+}
+
+fn main() {
+    println!("Hashing Function Demo");
+
+    loop {
+        let mode_choices = vec!["Text Hashing", "File Hashing", "Compare Hashes"];
+        let mode_selection = Select::new()
+            .with_prompt("Choose hashing mode")
+            .items(&mode_choices)
+            .default(0)
+            .interact()
+            .unwrap();
+
+        match mode_selection {
+            0 | 1 => {
+                let (input, input_type) = match mode_selection {
+                    0 => {
+                        print!("Enter text to hash: ");
+                        io::stdout().flush().unwrap();
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input).unwrap();
+                        let input = input.trim();
+                        (input.to_string(), "Text")
+                    }
+                    1 => {
+                        print!("Enter file path to hash: ");
+                        io::stdout().flush().unwrap();
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input).unwrap();
+                        let input = input.trim();
+                        (input.to_string(), "File")
+                    }
+                    _ => unreachable!(),
+                };
+
+                let choices = vec!["SHA-256", "Keccak-256", "Blake2b", "MD5"];
+                let selection = Select::new()
+                    .with_prompt("Choose a hashing algorithm")
+                    .items(&choices)
+                    .default(0)
+                    .interact()
+                    .unwrap();
+
+                let algorithm = choices[selection];
+                let hash_result = match mode_selection {
+                    0 => {
+                        Ok(hash_text(&input, algorithm))
+                    }
+                    1 => {
+                        hash_file(&input, algorithm)
+                    }
+                    _ => unreachable!(),
+                };
+
+                match hash_result {
+                    Ok(hash) => {
+                        println!("\nInput: '{}'", input);
+                        println!("Type: {}", input_type);
+                        println!("Algorithm: {}", algorithm);
+                        println!("Output Hash: {}\n", hash);
+
+                        match selection {
+                            0 => println!("SHA-256 is widely used in Bitcoin & general cryptography."),
+                            1 => println!("Keccak-256 is used in Ethereum smart contracts."),
+                            2 => println!("Blake2b is fast and secure. Used in modern protocols like Zcash."),
+                            3 => println!("MD5 is broken. Do NOT use it for security-critical tasks."),
+                            _ => {}
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                    }
+                }
+            }
+            2 => {
+                compare_hashes();
+            }
+            _ => unreachable!(),
+        }
 
         let continue_choices = vec!["Continue Hashing", "Exit"];
         let continue_selection = Select::new()
